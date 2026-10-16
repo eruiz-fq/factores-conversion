@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FactorLab — Dpto. Física y Química (IEDIB)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6fb;
+            color: #1e293b;
+        }
+        .font-mono-num {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .pill-shadow {
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 1px 3px 0 rgba(15, 23, 42, 0.03);
+        }
+        @keyframes popIn {
+            0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-pop {
+            animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        /* Estilo de unidad tachada en rojo */
+        .unit-cancelled {
+            position: relative;
+            display: inline-block;
+            opacity: 0.48;
+        }
+        .unit-cancelled::after {
+            content: "";
+            position: absolute;
+            left: -4px;
+            right: -4px;
+            top: 50%;
+            height: 2.5px;
+            background-color: #e11d48;
+            transform: rotate(-14deg);
+            border-radius: 2px;
+        }
+        .factor-card {
+            transition: all 0.18s ease;
+            user-select: none;
+            cursor: grab;
+        }
+        .factor-card:active {
+            cursor: grabbing;
+        }
+        .factor-card:hover:not(.card-used) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px -4px rgba(79, 70, 229, 0.2);
+        }
+        .card-used {
+            opacity: 0.32;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .drop-slot-active {
+            border-color: #4f46e5 !important;
+            background-color: #eef2ff !important;
+            transform: scale(1.03);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-3 sm:p-6 md:p-8">
+
+    <div class="max-w-5xl w-full mx-auto space-y-4">
+
+        <!-- 1. CABECERA SUPERIOR (Idéntica a la imagen de referencia) -->
+        <header class="bg-white rounded-2xl pill-shadow border border-slate-100 px-5 py-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-2xl bg-[#4f46e5] flex items-center justify-center text-white shadow-md shadow-indigo-200 shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 id="app-title" class="text-xl sm:text-2xl font-extrabold text-[#1e1b4b] tracking-tight leading-tight">FactorLab</h1>
+                    <p id="app-subtitle" class="text-xs sm:text-sm text-slate-500 font-medium">Dpto. Física y Química — Elena Ruiz Alfaro</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Selector Idioma -->
+                <div class="bg-slate-100 p-1 rounded-full flex items-center border border-slate-200/80 text-xs font-bold">
+                    <button id="btn-lang-ca" onclick="setLanguage('ca')" class="px-3.5 py-1.5 rounded-full transition-all text-slate-500 hover:text-slate-800">
+                        Català
+                    </button>
+                    <button id="btn-lang-es" onclick="setLanguage('es')" class="px-3.5 py-1.5 rounded-full transition-all bg-white text-[#4f46e5] shadow-sm">
+                        Castellano
+                    </button>
+                </div>
+
+                <!-- Pill ACIERTOS -->
+                <div class="bg-[#eff6ff] border border-blue-200/70 text-[#1d4ed8] px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wide uppercase">
+                    <span id="lbl-hits">ACIERTOS:</span> <span id="stat-hits" class="font-mono-num ml-0.5">0</span>
+                </div>
+
+                <!-- Pill RÉCORD -->
+                <div class="bg-[#fefce8] border border-amber-200/70 text-[#b45309] px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wide uppercase">
+                    <span id="lbl-record">RÉCORD:</span> <span id="stat-record" class="font-mono-num ml-0.5">0</span>
+                </div>
+
+                <!-- Pill RACHA -->
+                <div class="bg-[#4f46e5] text-white px-4 py-1.5 rounded-full text-xs font-extrabold tracking-wide uppercase shadow-sm shadow-indigo-300 flex items-center gap-1">
+                    <span>🔥</span> <span id="lbl-streak">RACHA:</span> <span id="stat-streak" class="font-mono-num">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. PASTILLA CENTRAL DE CRONÓMETRO -->
+        <div class="flex justify-center my-1">
+            <div class="bg-white rounded-full pill-shadow border border-slate-100 px-5 py-2 flex items-center gap-3">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="lbl-time" class="text-xs font-bold text-slate-500 tracking-wider uppercase">TIEMPO:</span>
+                <span id="timer-display" class="font-mono-num text-base font-extrabold text-[#1e1b4b]">00:00</span>
+                <button onclick="toggleTimer()" id="btn-timer-toggle" title="Pausar / Reanudar" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition text-xs font-bold">
+                    ⏸
+                </button>
+                <button onclick="resetTimer()" title="Reiniciar tiempo" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition text-xs font-bold">
+                    ↺
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. BARRA DE ALUMNO Y SESIÓN -->
+        <div class="bg-white rounded-2xl pill-shadow border border-slate-100 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 flex-grow sm:flex-grow-0">
+                <span class="text-slate-500 text-sm">👤</span>
+                <label id="lbl-student" for="student-name" class="text-xs font-bold text-slate-700 whitespace-nowrap">Alumno/a:</label>
+                <input id="student-name" type="text" placeholder="Ej. Ana García" class="border border-slate-200 rounded-xl px-3.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64 bg-slate-50/50">
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                <div class="bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-600">
+                    <span id="lbl-phys-pill">Física:</span> <span id="stat-phys" class="font-bold text-[#4f46e5]">0</span>
+                </div>
+                <div class="bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-600">
+                    <span id="lbl-chem-pill">Química:</span> <span id="stat-chem" class="font-bold text-[#4f46e5]">0</span>
+                </div>
+
+                <button onclick="generateSessionPDF()" class="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5">
+                    <span>📄</span> <span id="lbl-pdf-btn">Generar PDF de Sesión</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. SELECTOR DE BLOQUE: FÍSICA vs QUÍMICA -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div class="flex gap-2">
+                <button onclick="setBranch('fisica')" id="tab-fisica" class="px-5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all bg-[#4f46e5] text-white shadow-sm flex items-center gap-2">
+                    <span>🚀</span> <span id="lbl-tab-phys">Física (Unidades, Velocidad, Densidad, Presión)</span>
+                </button>
+                <button onclick="setBranch('quimica')" id="tab-quimica" class="px-5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 flex items-center gap-2">
+                    <span>🧪</span> <span id="lbl-tab-chem">Química (Moles, Avogadro, Gases, Disoluciones)</span>
+                </button>
+            </div>
+
+            <button onclick="nextProblem()" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-white border border-indigo-100 hover:bg-indigo-50 px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                <span>🔄</span> <span id="lbl-new-problem">Otro ejercicio</span>
+            </button>
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- ÁREA PRINCIPAL SIMPLE: GUIADO + ARRASTRE DE FACTORES  -->
+        <!-- ===================================================== -->
+        <main class="bg-white rounded-3xl pill-shadow border border-slate-100 p-6 sm:p-8 space-y-6 animate-pop">
+
+            <!-- Cabecera del ejercicio y Enunciado -->
+            <div>
+                <div class="flex items-center gap-2 mb-3">
+                    <span id="q-num-badge" class="bg-indigo-100 text-[#4f46e5] font-mono-num text-xs font-extrabold px-3 py-1 rounded-full">#1</span>
+                    <span id="q-topic-badge" class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-full">Cinemática</span>
+                </div>
+                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5">
+                    <p id="q-statement" class="text-slate-800 text-base sm:text-lg font-medium leading-relaxed"></p>
+                    <p id="q-extra-data" class="text-xs font-semibold text-slate-500 mt-2.5 pt-2.5 border-t border-slate-200/70"></p>
+                </div>
+            </div>
+
+            <!-- PASO 1: PREGUNTA INICIAL DE PLANTEAMIENTO -->
+            <div id="step1-container" class="bg-indigo-50/50 border border-indigo-200/80 rounded-2xl p-5">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="bg-[#4f46e5] text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase" id="lbl-step1-badge">Paso 1</span>
+                    <h2 id="lbl-step1-title" class="text-sm font-extrabold text-[#1e1b4b]">Pregunta inicial: ¿Cómo planteamos los factores de conversión?</h2>
+                </div>
+                <p id="step1-question" class="text-xs sm:text-sm text-slate-600 mb-3"></p>
+                <div id="step1-options" class="grid grid-cols-1 gap-2"></div>
+                <div id="step1-feedback" class="hidden mt-3 text-xs font-bold px-3.5 py-2 rounded-xl"></div>
+            </div>
+
+            <!-- PASO 2: ZONA DE ARRASTRE DE ETIQUETAS Y RESULTADO EN EL MISMO RECUADRO -->
+            <div id="step2-container" class="hidden space-y-4 animate-pop">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-[#4f46e5] text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase" id="lbl-step2-badge">Paso 2</span>
+                        <h2 id="lbl-step2-title" class="text-sm font-extrabold text-[#1e1b4b]">Arrastra los factores al recuadro para tachar unidades y escribe el resultado</h2>
+                    </div>
+                    <button onclick="resetChain()" class="text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-xl transition">
+                        ↺ <span id="lbl-reset-chain">Vaciar factores</span>
+                    </button>
+                </div>
+
+                <!-- PIZARRA DE ENCADENADO (Dato inicial + Huecos de arrastre + Recuadro de resultado integrado) -->
+                <div id="chain-board" class="bg-slate-50 border-2 border-indigo-100 rounded-2xl p-5 min-h-[115px] flex flex-wrap items-center gap-2.5 overflow-x-auto">
+                    <!-- Generado dinámicamente -->
+                </div>
+
+                <!-- Estado de las unidades en tiempo real -->
+                <div id="chain-alert" class="text-xs font-bold text-slate-600 px-1"></div>
+
+                <!-- BANCO DE ETIQUETAS ARRASTRABLES -->
+                <div class="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-3" id="lbl-bank-title">
+                        Etiquetas de factores disponibles (arrástralas a la casilla punteada):
+                    </div>
+                    <div id="cards-pool" class="flex flex-wrap gap-3"></div>
+                </div>
+            </div>
+
+            <!-- FEEDBACK FINAL -->
+            <div id="final-feedback" class="hidden rounded-2xl border p-5 animate-pop">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <span id="fb-icon" class="text-2xl"></span>
+                        <div>
+                            <h3 id="fb-title" class="font-extrabold text-sm sm:text-base"></h3>
+                            <p id="fb-detail" class="text-xs font-medium opacity-85 mt-0.5"></p>
+                        </div>
+                    </div>
+                    <button onclick="nextProblem()" class="bg-[#1e1b4b] hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm">
+                        <span id="lbl-next-btn">Siguiente ejercicio</span> ➔
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- 5. PIE DE PÁGINA DISCRETO (Idéntico a la captura) -->
+    <footer class="mt-10 py-5 text-center">
+        <p class="text-xs sm:text-sm font-medium text-[#8b9bb4] tracking-wide">
+            © 2026 Elena Ruiz Alfaro · Dpto. Física y Química · IEDIB
+        </p>
+    </footer>
+
+    <!-- ===================================================== -->
+    <!-- LÓGICA DE LA APLICACIÓN                               -->
+    <!-- ===================================================== -->
+    <script>
+        const I18N = {
+            es: {
+                appTitle: "FactorLab",
+                appSubtitle: "Dpto. Física y Química — Elena Ruiz Alfaro",
+                hits: "ACIERTOS:",
+                record: "RÉCORD:",
+                streak: "RACHA:",
+                time: "TIEMPO:",
+                student: "Alumno/a:",
+                studentPh: "Ej. Ana García",
+                physPill: "Física:",
+                chemPill: "Química:",
+                pdfBtn: "Generar PDF de Sesión",
+                tabPhys: "Física (Unidades, Velocidad, Densidad, Presión)",
+                tabChem: "Química (Moles, Avogadro, Gases, Disoluciones)",
+                newProblem: "Otro ejercicio",
+                step1Badge: "Paso 1",
+                step1Title: "Pregunta inicial: ¿Cómo planteamos los factores de conversión?",
+                step2Badge: "Paso 2",
+                step2Title: "Arrastra las etiquetas de factores para tachar unidades y escribe el resultado",
+                resetChain: "Vaciar factores",
+                bankTitle: "Etiquetas de factores disponibles (arrástralas al hueco punteado):",
+                dropHere: "Arrastra aquí el factor",
+                checkBtn: "Comprobar",
+                nextBtn: "Siguiente ejercicio",
+                step1Ok: "✓ ¡Correcto! Ahora arrastra las etiquetas de factores en orden para tachar las unidades.",
+                step1Err: "✗ Piensa qué unidades queremos cancelar y coloca cada equivalencia en posición opuesta.",
+                factorErr: "✗ Ese factor no cancela la unidad anterior (o está invertido). Fíjate en qué unidad necesitas tachar.",
+                chainProgress: "Arrastra el siguiente factor para seguir tachando unidades.",
+                chainReady: "✓ ¡Unidades simplificadas! Escribe el resultado numérico en el recuadro y pulsa Comprobar.",
+                ansOk: "¡Excelente! Has encadenado los factores y calculado el valor correctamente.",
+                ansErr: "El cálculo numérico no es exacto. Revisa la multiplicación de numeradores y división de denominadores."
+            },
+            ca: {
+                appTitle: "FactorLab",
+                appSubtitle: "Dpt. Física i Química — Elena Ruiz Alfaro",
+                hits: "ENCERTS:",
+                record: "RÈCORD:",
+                streak: "RATXA:",
+                time: "TEMPS:",
+                student: "Alumne/a:",
+                studentPh: "Ex. Anna Garcia",
+                physPill: "Física:",
+                chemPill: "Química:",
+                pdfBtn: "Generar PDF de Sessió",
+                tabPhys: "Física (Unitats, Velocitat, Densitat, Pressió)",
+                tabChem: "Química (Mols, Avogadro, Gasos, Dissolucions)",
+                newProblem: "Un altre exercici",
+                step1Badge: "Pas 1",
+                step1Title: "Pregunta inicial: Com plantegem els factors de conversió?",
+                step2Badge: "Pas 2",
+                step2Title: "Arrossega les etiquetes de factors per ratllar unitats i escriu el resultat",
+                resetChain: "Buidar factors",
+                bankTitle: "Etiquetes de factors disponibles (arrossega-les al buit puntejat):",
+                dropHere: "Arrossega aquí el factor",
+                checkBtn: "Comprovar",
+                nextBtn: "Següent exercici",
+                step1Ok: "✓ Correcte! Ara arrossega les etiquetes de factors en ordre per ratllar les unitats.",
+                step1Err: "✗ Pensa quines unitats volem cancel·lar i col·loca cada equivalència en posició oposada.",
+                factorErr: "✗ Aquest factor no cancel·la la unitat anterior (o està invertit). Fixa't en quina unitat necessites ratllar.",
+                chainProgress: "Arrossega el següent factor per continuar ratllant unitats.",
+                chainReady: "✓ Unitats simplificades! Escriu el resultat numèric al requadre i prem Comprovar.",
+                ansOk: "Excel·lent! Has encadenat els factors i calculat el valor correctament.",
+                ansErr: "El càlcul numèric no és exacte. Revisa la multiplicació de numeradors i divisió de denominadors."
+            }
+        };
+
+        let state = {
+            lang: 'es',
+            branch: 'fisica', // 'fisica' o 'quimica'
+            hits: 0,
+            record: 0,
+            streak: 0,
+            branchHits: { fisica: 0, quimica: 0 },
+            qCount: 0,
+            problem: null,
+            step1Solved: false,
+            chainIndex: 0,
+            pool: [],
+            answered: false,
+            history: [],
+            seconds: 0,
+            timerRunning: true,
+            timerInterval: null
+        };
+
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function roundTo(num, dec = 2) {
+            return Number(Math.round(num + "e" + dec) + "e-" + dec);
+        }
+
+        function shuffle(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        // =====================================================
+        // GENERADOR DE EJERCICIOS DE FÍSICA Y QUÍMICA
+        // =====================================================
+        function generateProblem(branch) {
+            if (branch === 'fisica') {
+                const type = randInt(1, 5);
+
+                // 1. Velocidad km/h -> m/s
+                if (type === 1) {
+                    const vKmh = [36, 54, 72, 90, 108, 126, 144][randInt(0, 6)];
+                    const ans = vKmh / 3.6;
+                    return {
+                        branch: 'fisica',
+                        topicEs: "Física · Velocidad (SI)",
+                        topicCa: "Física · Velocitat (SI)",
+                        statementEs: `Un vehículo circula a una velocidad constante de <strong>${vKmh} km/h</strong>. Exprésala en unidades del Sistema Internacional (<strong>m/s</strong>) encadenando dos factores de conversión.`,
+                        statementCa: `Un vehicle circula a una velocitat constant de <strong>${vKmh} km/h</strong>. Expressa-la en unitats del Sistema Internacional (<strong>m/s</strong>) encadenant dos factors de conversió.`,
+                        extraEs: `Equivalencias: 1 km = 1000 m · 1 h = 3600 s`,
+                        extraCa: `Equivalències: 1 km = 1000 m · 1 h = 3600 s`,
+                        qEs: `Partimos de ${vKmh} km en el numerador y 1 h en el denominador. ¿Cómo colocamos los dos factores para tachar km y h?`,
+                        qCa: `Partim de ${vKmh} km al numerador i 1 h al denominador. Com col·loquem els dos factors per ratllar km i h?`,
+                        optsEs: [
+                            { text: "Poner 1 km en el denominador (para tachar km) y 1 h en el numerador (para tachar h).", ok: true },
+                            { text: "Poner 1 km en el numerador y 1 h en el denominador.", ok: false },
+                            { text: "Multiplicar por 1000 km y dividir entre 60 s.", ok: false }
+                        ],
+                        optsCa: [
+                            { text: "Posar 1 km al denominador (per ratllar km) i 1 h al numerador (per ratllar h).", ok: true },
+                            { text: "Posar 1 km al numerador i 1 h al denominador.", ok: false },
+                            { text: "Multiplicar per 1000 km i dividir entre 60 s.", ok: false }
+                        ],
+                        initNumVal: `${vKmh}`, initNumUnit: `km`,
+                        initDenVal: `1`, initDenUnit: `h`,
+                        steps: [
+                            { numVal: `1000`, numUnit: `m`, denVal: `1`, denUnit: `km`, cancels: 'initNum' },
+                            { numVal: `1`, numUnit: `h`, denVal: `3600`, denUnit: `s`, cancels: 'initDen' }
+                        ],
+                        distractors: [
+                            { numVal: `1`, numUnit: `km`, denVal: `1000`, denUnit: `m` },
+                            { numVal: `3600`, numUnit: `s`, denVal: `1`, denUnit: `h` }
+                        ],
+                        finalUnit: `m/s`,
+                        answer: ans
+                    };
+                }
+
+                // 2. Velocidad m/s -> km/h
+                if (type === 2) {
+                    const vMs = [10, 15, 20, 25, 30, 35][randInt(0, 5)];
+                    const ans = vMs * 3.6;
+                    return {
+                        branch: 'fisica',
+                        topicEs: "Física · Velocidad",
+                        topicCa: "Física · Velocitat",
+                        statementEs: `Un corredor de atletismo alcanza una velocidad de <strong>${vMs} m/s</strong>. Convierte esta velocidad a <strong>km/h</strong> mediante factores de conversión.`,
+                        statementCa: `Un corredor d'atletisme assoleix una velocitat de <strong>${vMs} m/s</strong>. Converteix aquesta velocitat a <strong>km/h</strong> mitjançant factors de conversió.`,
+                        extraEs: `Equivalencias: 1 km = 1000 m · 1 h = 3600 s`,
+                        extraCa: `Equivalències: 1 km = 1000 m · 1 h = 3600 s`,
+                        qEs: `En ${vMs} m/s, los metros están arriba y los segundos abajo. ¿Qué debemos hacer para pasar a km/h?`,
+                        qCa: `En ${vMs} m/s, els metres estan a dalt i els segons a baix. Què hem de fer per passar a km/h?`,
+                        optsEs: [
+                            { text: "Colocar 1000 m abajo (junto a 1 km arriba) y 3600 s arriba (junto a 1 h abajo).", ok: true },
+                            { text: "Colocar 1000 m arriba y 3600 s abajo.", ok: false },
+                            { text: "Dividir entre 1000 y volver a dividir entre 3600.", ok: false }
+                        ],
+                        optsCa: [
+                            { text: "Col·locar 1000 m a baix (amb 1 km a dalt) i 3600 s a dalt (amb 1 h a baix).", ok: true },
+                            { text: "Col·locar 1000 m a dalt i 3600 s a baix.", ok: false },
+                            { text: "Dividir entre 1000 i tornar a dividir entre 3600.", ok: false }
+                        ],
+                        initNumVal: `${vMs}`, initNumUnit: `m`,
+                        initDenVal: `1`, initDenUnit: `s`,
+                        steps: [
+                            { numVal: `1`, numUnit: `km`, denVal: `1000`, denUnit: `m`, cancels: 'initNum' },
+                            { numVal: `3600`, numUnit: `s`, denVal: `1`, denUnit: `h`, cancels: 'initDen' }
+                        ],
+                        distractors: [
+                            { numVal: `1000`, numUnit: `m`, denVal: `1`, denUnit: `km` },
+                            { numVal: `1`, numUnit: `h`, denVal: `3600`, denUnit: `s` }
+                        ],
+                        finalUnit: `km/h`,
+                        answer: ans
+                    };
+                }
+
+                // 3. Densidad g/cm³ -> kg/m³
+                if (type === 3) {
+                    const rho = [0.8, 1.2, 1.5, 2.7, 7.8, 8.9][randInt(0, 5)];
+                    const ans = rho * 1000;
+                    return {
+                        branch: 'fisica',
+                        topicEs: "Física · Densidad (SI)",
+                        topicCa: "Física · Densitat (SI)",
+                        statementEs: `La densidad de un material en el laboratorio es de <strong>${rho} g/cm³</strong>. Exprésala en el Sistema Internacional (<strong>kg/m³</strong>) usando factores de conversión.`,
+                        statementCa: `La densitat d'un material al laboratori és de <strong>${rho} g/cm³</strong>. Expressa-la en el Sistema Internacional (<strong>kg/m³</strong>) emprant factors de conversió.`,
+                        extraEs: `Equivalencias: 1 kg = 1000 g · 1 m³ = 10⁶ cm³ (1 000 000 cm³)`,
+                        extraCa: `Equivalències: 1 kg = 1000 g · 1 m³ = 10⁶ cm³ (1 000 000 cm³)`,
+                        qEs: `Queremos pasar de g/cm³ a kg/m³. ¿Qué equivalencia volumétrica debemos usar para cancelar cm³ del denominador?`,
+                        qCa: `Volem passar de g/cm³ a kg/m³. Quina equivalència volumètrica hem d'emprar per cancel·lar cm³ del denominador?`,
+                        optsEs: [
+                            { text: "1000 g en el denominador (con 1 kg arriba) y 10⁶ cm³ en el numerador (con 1 m³ abajo).", ok: true },
+                            { text: "Usar 100 cm³ = 1 m³ porque 1 m son 100 cm.", ok: false },
+                            { text: "Colocar 1000 g en el numerador y 10⁶ cm³ en el denominador.", ok: false }
+                        ],
+                        optsCa: [
+                            { text: "1000 g al denominador (amb 1 kg a dalt) i 10⁶ cm³ al numerador (amb 1 m³ a baix).", ok: true },
+                            { text: "Usar 100 cm³ = 1 m³ perquè 1 m són 100 cm.", ok: false },
+                            { text: "Col·locar 1000 g al numerador i 10⁶ cm³ al denominador.", ok: false }
+                        ],
+                        initNumVal: `${rho}`, initNumUnit: `g`,
+                        initDenVal: `1`, initDenUnit: `cm³`,
+                        steps: [
+                            { numVal: `1`, numUnit: `kg`, denVal: `1000`, denUnit: `g`, cancels: 'initNum' },
+                            { numVal: `10⁶`, numUnit: `cm³`, denVal: `1`, denUnit: `m³`, cancels: 'initDen' }
+                        ],
+                        distractors: [
+                            { numVal: `1000`, numUnit: `g`, denVal: `1`, denUnit: `kg` },
+                            { numVal: `100`, numUnit: `cm³`, denVal: `1`, denUnit: `m³` }
+                        ],
+                        finalUnit: `kg/m³`,
+                        answer: ans
+                    };
+                }
+
+                // 4. Presión mmHg -> Pa (pasando por atm)
+                if (type === 4) {
+                    const mmhg = [380, 760, 1140, 1520][randInt(0, 3)];
+                    const ansKpa = (mmhg / 760) * 101.3;
+                    return {
+                        branch: 'fisica',
+                        topicEs: "Física · Presión",
+                        topicCa: "Física · Pressió",
+                        statementEs: `Un manómetro registra una presión de <strong>${mmhg} mmHg</strong>. Transforma esta presión a <strong>kPa</strong> encadenando dos factores (pasando primero a atm).`,
+                        statementCa: `Un manòmetre registra una pressió de <strong>${mmhg} mmHg</strong>. Transforma aquesta pressió a <strong>kPa</strong> encadenant dos factors (passant primer a atm).`,
+                        extraEs: `Equivalencias: 1 atm = 760 mmHg · 1 atm = 101,3 kPa`,
+                        extraCa: `Equivalències: 1 atm = 760 mmHg · 1 atm = 101,3 kPa`,
+                        qEs: `Partiendo de ${mmhg} mmHg, ¿qué secuencia de factores permite llegar a kPa?`,
+                        qCa: `Partint de ${mmhg} mmHg, quina seqüència de factors permet arribar a kPa?`,
+                        optsEs: [
+                            { text: "Primero (1 atm / 760 mmHg) para tachar mmHg, y luego (101,3 kPa / 1 atm) para tachar atm.", ok: true },
+                            { text: "Primero (760 mmHg / 1 atm) y después (1 atm / 101,3 kPa).", ok: false },
+                            { text: "Multiplicar los mmHg directamente por 760.", ok: false }
+                        ],
+                        optsCa: [
+                            { text: "Primer (1 atm / 760 mmHg) per ratllar mmHg, i després (101,3 kPa / 1 atm) per ratllar atm.", ok: true },
+                            { text: "Primer (760 mmHg / 1 atm) i després (1 atm / 101,3 kPa).", ok: false },
+                            { text: "Multiplicar els mmHg directament per 760.", ok: false }
+                        ],
+                        initNumVal: `${mmhg}`, initNumUnit: `mmHg`,
+                        initDenVal: ``, initDenUnit: ``,
+                        steps: [
+                            { numVal: `1`, numUnit: `atm`, denVal: `760`, denUnit: `mmHg`, cancels: 'initNum' },
+                            { numVal: `101.3`, numUnit: `kPa`, denVal: `1`, denUnit: `atm`, cancels: 'prevNum' }
+                        ],
+                        distractors: [
+                            { numVal: `760`, numUnit: `mmHg`, denVal: `1`, denUnit: `atm` },
+                            { numVal: `1`, numUnit: `atm`, denVal: `101.3`, denUnit: `kPa` }
+                        ],
+                        finalUnit: `kPa`,
+                        answer: ansKpa
+                    };
+                }
+
+                // 5. Potencia / Energía: kWh -> kJ
+                else {
+                    const kwh = [2, 5, 10, 15][randInt(0, 3)];
+                    const ansKj = kwh * 3600;
+                    return {
+                        branch: 'fisica',
+                        topicEs: "Física · Energía",
+                        topicCa: "Física · Energia",
+                        statementEs: `El consumo eléctrico de un aparato ha sido de <strong>${kwh} kW·h</strong>. Convierte esta energía a <strong>kJ</strong> sabiendo que $1\\text{ kW} = 1\\text{ kJ/s}$.`,
+                        statementCa: `El consum elèctric d'un aparell ha estat de <strong>${kwh} kW·h</strong>. Converteix aquesta energia a <strong>kJ</strong> sabent que $1\\text{ kW} = 1\\text{ kJ/s}$.`,
+                        extraEs: `Equivalencias: 1 h = 3600 s · 1 kW·s = 1 kJ`,
+                        extraCa: `Equivalències: 1 h = 3600 s · 1 kW·s = 1 kJ`,
+                        qEs: `Queremos pasar de kW·h a kJ. ¿Cómo transformamos las horas en segundos y luego a kilojulios?`,
+                        qCa: `Volem passar de kW·h a kJ. Com transformem les hores en segons i després a kilojoules?`,
+                        optsEs: [
+                            { text: "Multiplicar por (3600 kW·s / 1 kW·h) y después por (1 kJ / 1 kW·s).", ok: true },
+                            { text: "Dividir entre 3600 s.", ok: false },
+                            { text: "Multiplicar por 60 s y dividir entre 1000.", ok: false }
+                        ],
+                        optsCa: [
+                            { text: "Multiplicar per (3600 kW·s / 1 kW·h) i després per (1 kJ / 1 kW·s).", ok: true },
+                            { text: "Dividir entre 3600 s.", ok: false },
+                            { text: "Multiplicar per 60 s i dividir entre 1000.", ok: false }
+                        ],
+                        initNumVal: `${kwh}`, initNumUnit: `kW·h`,
+                        initDenVal: ``, initDenUnit: ``,
+                        steps: [
+                            { numVal: `3600`, numUnit: `kW·s`, denVal: `1`, denUnit: `kW·h`, cancels: 'initNum' },
+                            { numVal: `1`, numUnit: `kJ`, denVal: `1`, denUnit: `kW·s`, cancels: 'prevNum' }
+                        ],
+                        distractors: [
+                            { numVal: `1`, numUnit: `kW·h`, denVal: `3600`, denUnit: `kW·s` },
+                            { numVal: `1`, numUnit: `kW·h`, denVal: `60`, denUnit: `kW·s` }
+                        ],
+                        finalUnit: `kJ`,
+                        answer: ansKj
+                    };
+                }
+            }
+
+            // =====================================================
+            // RAMA QUÍMICA (Moles, Gases c.n., Molaridad, Riqueza)
+            // =====================================================
+            else {
+                const type = randInt(1, 4);
+                const substances = [
+                    { f: "H₂O", mm: 18 },
+                    { f: "NaOH", mm: 40 },
+                    { f: "H₂SO₄", mm: 98 },
+                    { f: "NaCl", mm: 58.5 },
+                    { f: "CO₂", mm: 44 },
+                    { f: "CaCO₃", mm: 100 }
+                ];
+                const sub = substances[randInt(0, substances.length - 1)];
+
+                // 1. Gramos -> Moles
+                if (type === 1) {
+                    const grams = randInt(20, 180);
+                    const ansMol = grams / sub.mm;
+                    return {
+                        branch: 'quimica',
+                        topicEs: "Química · Masa a Moles",
+                        topicCa: "Química · Massa a Mols",
+                        statementEs: `Disponemos de una muestra de <strong>${grams} g de ${sub.f}</strong> puro. Calcula a cuántos <strong>moles de ${sub.f}</strong> equivale usando su masa molar como factor de conversión.`,
+                        statementCa: `Disposem d'una mostra de <strong>${grams} g de ${sub.f}</strong> pur. Calcula a quants <strong>mols de ${sub.f}</strong> equival emprant la seva massa molar com a factor de conversió.`,
+                        extraEs: `Dato de masa molar: Mm(${sub.f}) = ${sub.mm} g/mol`,
+                        extraCa: `Dada de massa molar: Mm(${sub.f}) = ${sub.mm} g/mol`,
+                        qEs: `Partimos de ${grams} g de ${sub.f}. ¿Cómo debemos colocar el factor de la masa molar (${sub.mm} g/mol)?`,
+                        qCa: `Partim de ${grams} g de ${sub.f}. Com hem de col·locar el factor de la massa molar (${sub.mm} g/mol)?`,
+                        optsEs: [
+                            { text: `Poner 1 mol de ${sub.f} arriba y ${sub.mm} g de ${sub.f} abajo para tachar los gramos.`, ok: true },
+                            { text: `Poner ${sub.mm} g de ${sub.f} arriba y 1 mol abajo.`, ok: false },
+                            { text: `Multiplicar los gramos por 22,4 L.`, ok: false }
+                        ],
+                        optsCa: [
+                            { text: `Posar 1 mol de ${sub.f} a dalt i ${sub.mm} g de ${sub.f} a baix per ratllar els grams.`, ok: true },
+                            { text: `Posar ${sub.mm} g de ${sub.f} a dalt i 1 mol a baix.`, ok: false },
+                            { text: `Multiplicar els grams per 22,4 L.`, ok: false }
+                        ],
+                        initNumVal: `${grams}`, initNumUnit: `g ${sub.f}`,
+                        initDenVal: ``, initDenUnit: ``,
+                        steps: [
+                            { numVal: `1`, numUnit: `mol ${sub.f}`, denVal: `${sub.mm}`, denUnit: `g ${sub.f}`, cancels: 'initNum' }
+                        ],
+                        distractors: [
+                            { numVal: `${sub.mm}`, numUnit: `g ${sub.f}`, denVal: `1`, denUnit: `mol ${sub.f}` },
+                            { numVal: `22.4`, numUnit: `L`, denVal: `1`, denUnit: `mol ${sub.f}` }
+                        ],
+                        finalUnit: `mol ${sub.f}`,
+                        answer: ansMol
+                    };
+                }
+
+                // 2. Gramos de gas -> Litros en c.n. (2 pasos encadenados)
+                if (type === 2) {
+                    const gas = [{ f: "CO₂", mm: 44 }, { f: "O₂", mm: 32 }, { f: "N₂", mm: 28 }, { f: "CH₄", mm: 16 }][randInt(0, 3)];
+                    const grams = randInt(16, 110);
+                    const ansL = (grams / gas.mm) * 22.4;
+                    return {
+                        branch: 'quimica',
+                        topicEs: "Química · Volumen Molar (c.n.)",
+                        topicCa: "Química · Volum Molar (c.n.)",
+                        statementEs: `Tenemos <strong>${grams} g de gas ${gas.f}</strong> en condiciones normales (c.n., $0\\text{ }^\\circ\\text{C}$ y $1\\text{ atm}$). Calcula qué <strong>volumen en litros (L)</strong> ocupa encadenando dos factores de conversión.`,
+                        statementCa: `Tenim <strong>${grams} g de gas ${gas.f}</strong> en condicions normals (c.n., $0\\text{ }^\\circ\\text{C}$ i $1\\text{ atm}$). Calcula quin <strong>volum en litres (L)</strong> ocupa encadenant dos factors de conversió.`,
+                        extraEs: `Datos: Mm(${gas.f}) = ${gas.mm} g/mol · 1 mol de gas en c.n. = 22,4 L`,
+                        extraCa: `Dades: Mm(${gas.f}) = ${gas.mm} g/mol · 1 mol de gas en c.n. = 22,4 L`,
+                        qEs: `Queremos pasar de gramos de ${gas.f} a litros en c.n. ¿Cuál es el orden correcto de los dos factores?`,
+                        qCa: `Volem passar de grams de ${gas.f} a litres en c.n. Quin és l'ordre correcte dels dos factors?`,
+                        optsEs: [
+                            { text: `Primero pasar de gramos a moles (1 mol / ${gas.mm} g) y luego de moles a litros (22,4 L / 1 mol).`, ok: true },
+                            { text: `Multiplicar directamente los gramos por 22,4 L sin pasar a moles.`, ok: false },
+                            { text: `Dividir entre 22,4 L y multiplicar por la masa molar.`, ok: false }
+                        ],
+                        optsCa: [
+                            { text: `Primer passar de grams a mols (1 mol / ${gas.mm} g) i després de mols a litres (22,4 L / 1 mol).`, ok: true },
+                            { text: `Multiplicar directament els grams per 22,4 L sense passar a mols.`, ok: false },
+                            { text: `Dividir entre 22,4 L i multiplicar per la massa molar.`, ok: false }
+                        ],
+                        initNumVal: `${grams}`, initNumUnit: `g ${gas.f}`,
+                        initDenVal: ``, initDenUnit: ``,
+                        steps: [
+                            { numVal: `1`, numUnit: `mol ${gas.f}`, denVal: `${gas.mm}`, denUnit: `g ${gas.f}`, cancels: 'initNum' },
+                            { numVal: `22.4`, numUnit: `L ${gas.f}`, denVal: `1`, denUnit: `mol ${gas.f}`, cancels: 'prevNum' }
+                        ],
+                        distractors: [
+                            { numVal: `${gas.mm}`, numUnit: `g ${gas.f}`, denVal: `1`, denUnit: `mol ${gas.f}` },
+                            { numVal: `1`, numUnit: `mol ${gas.f}`, denVal: `22.4`, denUnit: `L ${gas.f}` }
+                        ],
+                        finalUnit: `L ${gas.f}`,
+                        answer: ansL
+                    };
+                }
+
+                // 3. Preparación de disolución: mL disolución -> g de soluto (3 pasos)
+                if (type === 3) {
+                    const volMl = [100, 250, 500][randInt(0, 2)];
+                    const mConc = [0.2, 0.5, 1.0, 1.5][randInt(0, 3)];
+                    const ansG = (volMl / 1000) * mConc * sub.mm;
+                    return {
+                        branch: 'quimica',
+                        topicEs: "Química · Molaridad y Disoluciones",
+                        topicCa: "Química · Molaritat i Dissolucions",
+                        statementEs: `Queremos preparar <strong>${volMl} mL</strong> de una disolución <strong>${mConc} M</strong> (${mConc} mol/L) de ${sub.f}. Calcula cuántos <strong>gramos de ${sub.f}</strong> puro debemos pesar encadenando tres factores.`,
+                        statementCa: `Volem preparar <strong>${volMl} mL</strong> d'una dissolució <strong>${mConc} M</strong> (${mConc} mol/L) de ${sub.f}. Calcula quants <strong>grams de ${sub.f}</strong> pur hem de pesar encadenant tres factors.`,
+                        extraEs: `Datos: 1 L = 1000 mL · Molaridad = ${mConc} mol/L · Mm(${sub.f}) = ${sub.mm} g/mol`,
+                        extraCa: `Dades: 1 L = 1000 mL · Molaritat = ${mConc} mol/L · Mm(${sub.f}) = ${sub.mm} g/mol`,
+                        qEs: `Partimos de los ${volMl} mL de disolución a preparar. ¿Cómo encadenamos los factores hasta llegar a gramos de ${sub.f}?`,
+                        qCa: `Partim dels ${volMl} mL de dissolució a preparar. Com encadenem els factors fins a arribar a grams de ${sub.f}?`,
+                        optsEs: [
+                            { text: `Pasar de mL a L (1 L / 1000 mL), luego de L a moles (${mConc} mol / 1 L) y de moles a gramos (${sub.mm} g / 1 mol).`, ok: true },
+                            { text: `Dividir los mL entre la masa molar y multiplicar por 1000.`, ok: false },
+                            { text: `Multiplicar ${volMl} mL por ${mConc} M sin pasar a litros.`, ok: false }
+                        ],
+                        optsCa: [
+                            { text: `Passar de mL a L (1 L / 1000 mL), després de L a mols (${mConc} mol / 1 L) i de mols a grams (${sub.mm} g / 1 mol).`, ok: true },
+                            { text: `Dividir els mL entre la massa molar i multiplicar per 1000.`, ok: false },
+                            { text: `Multiplicar ${volMl} mL per ${mConc} M sense passar a litres.`, ok: false }
+                        ],
+                        initNumVal: `${volMl}`, initNumUnit: `mL dis.`,
+                        initDenVal: ``, initDenUnit: ``,
+                        steps: [
+                            { numVal: `1`, numUnit: `L dis.`, denVal: `1000`, denUnit: `mL dis.`, cancels: 'initNum' },
+                            { numVal: `${mConc}`, numUnit: `mol ${sub.f}`, denVal: `1`, denUnit: `L dis.`, cancels: 'prevNum' },
+                            { numVal: `${sub.mm}`, numUnit: `g ${sub.f}`, denVal: `1`, denUnit: `mol ${sub.f}`, cancels: 'prevNum' }
+                        ],
+                        distractors: [
+                            { numVal: `1000`, numUnit: `mL dis.`, denVal: `1`, denUnit: `L dis.` },
+                            { numVal: `1`, numUnit: `mol ${sub.f}`, denVal: `${sub.mm}`, denUnit: `g ${sub.f}` }
+                        ],
+                        finalUnit: `g ${sub.f}`,
+                        answer: ansG
+                    };
+                }
+
+                // 4. Riqueza y densidad de un reactivo comercial: mL -> g soluto puro
+                else {
+                    const volMl = [20, 50, 100][randInt(0, 2)];
+                    const rho = 1.19;
+                    const pct = 37;
+                    const ansG = volMl * rho * (pct / 100);
+                    return {
+                        branch: 'quimica',
+                        topicEs: "Química · Densidad y Riqueza (%)",
+                        topicCa: "Química · Densitat i Riquesa (%)",
+                        statementEs: `Tomamos con una pipeta <strong>${volMl} mL</strong> de HCl comercial cuya etiqueta indica una densidad de <strong>$1{,}19\\text{ g/mL}$</strong> y una riqueza del <strong>$37\\%$ en masa</strong>. ¿Cuántos <strong>gramos de HCl puro</strong> contienen?`,
+                        statementCa: `Agafem amb una pipeta <strong>${volMl} mL</strong> de HCl comercial l'etiqueta del qual indica una densitat d'<strong>$1{,}19\\text{ g/mL}$</strong> i una riquesa del <strong>$37\\%$ en massa</strong>. Quants <strong>grams de HCl pur</strong> contenen?`,
+                        extraEs: `Equivalencias: 1 mL dis. = 1,19 g dis. · 100 g dis. = 37 g HCl puro`,
+                        extraCa: `Equivalències: 1 mL dis. = 1,19 g dis. · 100 g dis. = 37 g HCl pur`,
+                        qEs: `Partimos de ${volMl} mL de disolución comercial. ¿Cómo encadenamos la densidad y la riqueza sin confundir disolución con soluto?`,
+                        qCa: `Partim de ${volMl} mL de dissolució comercial. Com encadenem la densitat i la riquesa sense confondre dissolució amb solut?`,
+                        optsEs: [
+                            { text: `Primero la densidad (1,19 g dis. / 1 mL dis.) para tachar mL dis., y luego la riqueza (37 g HCl / 100 g dis.) para tachar g dis.`, ok: true },
+                            { text: `Dividir entre 1,19 g/mL y multiplicar por 100 g dis. / 37 g HCl.`, ok: false },
+                            { text: `Sumar 1,19 + 37 y multiplicar por los mililitros.`, ok: false }
+                        ],
+                        optsCa: [
+                            { text: `Primer la densitat (1,19 g dis. / 1 mL dis.) per ratllar mL dis., i després la riquesa (37 g HCl / 100 g dis.) per ratllar g dis.`, ok: true },
+                            { text: `Dividir entre 1,19 g/mL i multiplicar per 100 g dis. / 37 g HCl.`, ok: false },
+                            { text: `Sumar 1,19 + 37 i multiplicar pels mil·lilitres.`, ok: false }
+                        ],
+                        initNumVal: `${volMl}`, initNumUnit: `mL dis.`,
+                        initDenVal: ``, initDenUnit: ``,
+                        steps: [
+                            { numVal: `1.19`, numUnit: `g dis.`, denVal: `1`, denUnit: `mL dis.`, cancels: 'initNum' },
+                            { numVal: `37`, numUnit: `g HCl`, denVal: `100`, denUnit: `g dis.`, cancels: 'prevNum' }
+                        ],
+                        distractors: [
+                            { numVal: `1`, numUnit: `mL dis.`, denVal: `1.19`, denUnit: `g dis.` },
+                            { numVal: `100`, numUnit: `g dis.`, denVal: `37`, denUnit: `g HCl` }
+                        ],
+                        finalUnit: `g HCl`,
+                        answer: ansG
+                    };
+                }
+            }
+        }
+
+        // =====================================================
+        // FLUJO DE LA APLICACIÓN Y ARRASTRE (DRAG & DROP)
+        // =====================================================
+        function setBranch(b) {
+            state.branch = b;
+            const btnPhys = document.getElementById('tab-fisica');
+            const btnChem = document.getElementById('tab-quimica');
+            if (b === 'fisica') {
+                btnPhys.className = "px-5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all bg-[#4f46e5] text-white shadow-sm flex items-center gap-2";
+                btnChem.className = "px-5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 flex items-center gap-2";
+            } else {
+                btnChem.className = "px-5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all bg-[#4f46e5] text-white shadow-sm flex items-center gap-2";
+                btnPhys.className = "px-5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80 flex items-center gap-2";
+            }
+            nextProblem();
+        }
+
+        function nextProblem() {
+            state.qCount++;
+            state.problem = generateProblem(state.branch);
+            state.step1Solved = false;
+            state.chainIndex = 0;
+            state.answered = false;
+
+            const p = state.problem;
+            const rawCards = [
+                ...p.steps.map((s, idx) => ({ ...s, stepOrder: idx, used: false })),
+                ...p.distractors.map(d => ({ ...d, stepOrder: -1, used: false }))
+            ];
+            state.pool = shuffle(rawCards);
+
+            document.getElementById('step1-feedback').classList.add('hidden');
+            document.getElementById('step2-container').classList.add('hidden');
+            document.getElementById('final-feedback').classList.add('hidden');
+
+            renderAll();
+        }
+
+        function renderAll() {
+            const p = state.problem;
+            const t = I18N[state.lang];
+
+            document.getElementById('q-num-badge').textContent = `#${state.qCount}`;
+            document.getElementById('q-topic-badge').textContent = state.lang === 'es' ? p.topicEs : p.topicCa;
+            document.getElementById('q-statement').innerHTML = state.lang === 'es' ? p.statementEs : p.statementCa;
+            document.getElementById('q-extra-data').textContent = state.lang === 'es' ? p.extraEs : p.extraCa;
+
+            // Paso 1
+            document.getElementById('step1-question').textContent = state.lang === 'es' ? p.qEs : p.qCa;
+            const opts = state.lang === 'es' ? p.optsEs : p.optsCa;
+            const optBox = document.getElementById('step1-options');
+            optBox.innerHTML = '';
+
+            opts.forEach((o, idx) => {
+                const btn = document.createElement('button');
+                btn.disabled = state.step1Solved;
+                btn.className = "text-left px-4 py-3 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/40 transition text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2.5";
+                btn.innerHTML = `<span class="w-6 h-6 rounded-full bg-indigo-100 text-[#4f46e5] font-extrabold text-xs flex items-center justify-center shrink-0">${String.fromCharCode(65 + idx)}</span> <span>${o.text}</span>`;
+                btn.onclick = () => checkStep1(o.ok, btn);
+                optBox.appendChild(btn);
+            });
+
+            if (state.step1Solved) {
+                renderChainBoard();
+            }
+
+            if (window.renderMathInElement) {
+                renderMathInElement(document.body, {
+                    delimiters: [{ left: "$", right: "$", display: false }],
+                    throwOnError: false
+                });
+            }
+        }
+
+        function checkStep1(isOk, btnEl) {
+            const t = I18N[state.lang];
+            const fb = document.getElementById('step1-feedback');
+            fb.classList.remove('hidden', 'bg-emerald-100', 'text-emerald-900', 'bg-rose-100', 'text-rose-900');
+
+            if (isOk) {
+                state.step1Solved = true;
+                btnEl.classList.add('border-emerald-500', 'bg-emerald-50', 'font-bold');
+                fb.classList.add('bg-emerald-100', 'text-emerald-900');
+                fb.textContent = t.step1Ok;
+                document.getElementById('step2-container').classList.remove('hidden');
+                renderChainBoard();
+            } else {
+                btnEl.classList.add('border-rose-400', 'bg-rose-50', 'opacity-60');
+                fb.classList.add('bg-rose-100', 'text-rose-900');
+                fb.textContent = t.step1Err;
+            }
+        }
+
+        function resetChain() {
+            if (state.answered) return;
+            state.chainIndex = 0;
+            state.pool.forEach(c => c.used = false);
+            renderChainBoard();
+        }
+
+        function renderChainBoard() {
+            const p = state.problem;
+            const t = I18N[state.lang];
+            const board = document.getElementById('chain-board');
+            board.innerHTML = '';
+
+            const cur = state.chainIndex;
+            const total = p.steps.length;
+
+            // Verificar si las unidades de la tarjeta inicial están canceladas por los pasos ya colocados
+            const initNumCancelled = p.steps.slice(0, cur).some(s => s.cancels === 'initNum');
+            const initDenCancelled = p.steps.slice(0, cur).some(s => s.cancels === 'initDen');
+
+            // 1. TARJETA DATO INICIAL (Se tachan también sus unidades en rojo)
+            const initEl = document.createElement('div');
+            initEl.className = "bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 flex flex-col items-center justify-center text-xs font-bold shadow-sm";
+            if (p.initDenUnit) {
+                initEl.innerHTML = `
+                    <div class="pb-1 border-b border-slate-300 w-full text-center">
+                        <span class="font-mono-num text-slate-900 text-sm">${p.initNumVal}</span>
+                        <span class="ml-1 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-900 ${initNumCancelled ? 'unit-cancelled' : ''}">${p.initNumUnit}</span>
+                    </div>
+                    <div class="pt-1 w-full text-center">
+                        <span class="font-mono-num text-slate-900 text-sm">${p.initDenVal}</span>
+                        <span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 ${initDenCancelled ? 'unit-cancelled' : ''}">${p.initDenUnit}</span>
+                    </div>
+                `;
+            } else {
+                initEl.innerHTML = `
+                    <div class="py-1 text-center">
+                        <span class="font-mono-num text-slate-900 text-sm">${p.initNumVal}</span>
+                        <span class="ml-1 px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 ${initNumCancelled ? 'unit-cancelled' : ''}">${p.initNumUnit}</span>
+                    </div>
+                `;
+            }
+            board.appendChild(initEl);
+
+            // 2. FACTORES YA ARRASTRADOS
+            for (let i = 0; i < cur; i++) {
+                const s = p.steps[i];
+                const dot = document.createElement('span');
+                dot.className = "font-black text-slate-400 text-xl";
+                dot.textContent = "·";
+                board.appendChild(dot);
+
+                // ¿El numerador de este factor es cancelado por un paso posterior?
+                const cancelledByLater = p.steps.slice(i + 1, cur).some(later => later.denUnit === s.numUnit);
+                // ¿Este factor cancela en su numerador al denominador inicial?
+                const numCancelsInitDen = s.cancels === 'initDen';
+                // ¿Su denominador cancela una unidad previa?
+                const denCancelsPrev = (s.cancels === 'initNum' || s.cancels === 'prevNum');
+
+                const fCard = document.createElement('div');
+                fCard.className = "bg-indigo-50/80 border-2 border-indigo-300 rounded-xl px-4 py-2.5 flex flex-col items-center justify-center text-xs font-bold animate-pop";
+                fCard.innerHTML = `
+                    <div class="pb-1 border-b border-indigo-300 w-full text-center">
+                        <span class="font-mono-num text-slate-900 text-sm">${s.numVal}</span>
+                        <span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 ${(cancelledByLater || numCancelsInitDen) ? 'unit-cancelled' : ''}">${s.numUnit}</span>
+                    </div>
+                    <div class="pt-1 w-full text-center">
+                        <span class="font-mono-num text-slate-900 text-sm">${s.denVal}</span>
+                        <span class="ml-1 px-1.5 py-0.5 rounded bg-rose-100 text-rose-900 ${denCancelsPrev ? 'unit-cancelled' : ''}">${s.denUnit}</span>
+                    </div>
+                `;
+                board.appendChild(fCard);
+            }
+
+            const alertEl = document.getElementById('chain-alert');
+
+            // 3. SI FALTAN FACTORES: ZONA DE DROP PUNTEADA
+            if (cur < total) {
+                const dot = document.createElement('span');
+                dot.className = "font-black text-slate-400 text-xl";
+                dot.textContent = "·";
+                board.appendChild(dot);
+
+                const dropZone = document.createElement('div');
+                dropZone.id = "active-drop-zone";
+                dropZone.className = "border-2 border-dashed border-indigo-400 bg-white/80 rounded-2xl px-5 py-4 min-w-[160px] text-center text-xs font-extrabold text-indigo-600 transition-all flex flex-col items-center justify-center gap-1";
+                dropZone.innerHTML = `<span>📥 ${t.dropHere} (${cur + 1}/${total})</span>`;
+
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('drop-slot-active');
+                });
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('drop-slot-active');
+                });
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('drop-slot-active');
+                    const poolIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                    handleFactorAttempt(poolIdx);
+                });
+
+                board.appendChild(dropZone);
+                alertEl.innerHTML = `<span>🧭 ${t.chainProgress}</span>`;
+            }
+
+            // 4. RECUADRO INTEGRADO DE UNIDAD ACTUAL Y ENTRADA DE RESULTADO (A la derecha del signo =)
+            const eqSign = document.createElement('span');
+            eqSign.className = "font-black text-slate-500 text-xl px-1";
+            eqSign.textContent = "=";
+            board.appendChild(eqSign);
+
+            const resultBox = document.createElement('div');
+            if (cur < total) {
+                // Muestra la unidad provisional viva mientras aún faltan factores
+                resultBox.className = "bg-slate-100 border border-slate-300 rounded-2xl px-4 py-3 text-xs font-bold text-slate-500 flex items-center gap-2";
+                resultBox.innerHTML = `<span>⏳ ...</span> <span class="bg-slate-200 text-slate-700 px-2 py-0.5 rounded">${p.finalUnit}</span>`;
+            } else {
+                // Todos los factores encadenados: se habilita el input directamente dentro de este recuadro
+                resultBox.className = "bg-emerald-50 border-2 border-emerald-400 rounded-2xl px-3.5 py-2 flex flex-wrap items-center gap-2 shadow-sm animate-pop";
+                resultBox.innerHTML = `
+                    <input id="inline-result-input" type="number" step="any" placeholder="?" 
+                           ${state.answered ? 'disabled' : ''}
+                           onkeydown="if(event.key==='Enter') verifyFinalResult()"
+                           class="w-24 sm:w-28 bg-white border-2 border-emerald-300 focus:border-[#4f46e5] rounded-xl px-3 py-1.5 text-base font-mono-num font-extrabold text-slate-900 focus:outline-none">
+                    <span class="bg-emerald-200/80 text-emerald-950 font-extrabold text-xs px-2.5 py-1.5 rounded-lg">${p.finalUnit}</span>
+                    <button id="btn-inline-check" onclick="verifyFinalResult()" ${state.answered ? 'disabled' : ''}
+                            class="bg-[#4f46e5] hover:bg-[#4338ca] text-white text-xs font-extrabold px-3.5 py-2 rounded-xl transition shadow-sm">
+                        ✓ ${t.checkBtn}
+                    </button>
+                `;
+                alertEl.innerHTML = `<span class="text-emerald-700">${t.chainReady}</span>`;
+            }
+            board.appendChild(resultBox);
+
+            // 5. RENDERIZAR BANCO DE ETIQUETAS (SOLO ARRASTRE)
+            const poolEl = document.getElementById('cards-pool');
+            poolEl.innerHTML = '';
+            state.pool.forEach((card, idx) => {
+                const cardEl = document.createElement('div');
+                const isDisabled = card.used || cur >= total;
+                cardEl.draggable = !isDisabled;
+                cardEl.className = `factor-card bg-white border-2 border-slate-300 hover:border-[#4f46e5] rounded-xl px-4 py-2 text-xs font-bold flex flex-col items-center shadow-sm ${isDisabled ? 'card-used' : ''}`;
+                cardEl.innerHTML = `
+                    <div class="pb-1 border-b border-slate-300 w-full text-center">
+                        <span class="font-mono-num text-[#4f46e5] text-sm">${card.numVal}</span> <span>${card.numUnit}</span>
+                    </div>
+                    <div class="pt-1 w-full text-center">
+                        <span class="font-mono-num text-[#4f46e5] text-sm">${card.denVal}</span> <span>${card.denUnit}</span>
+                    </div>
+                `;
+
+                cardEl.addEventListener('dragstart', (e) => {
+                    if (isDisabled) {
+                        e.preventDefault();
+                        return;
+                    }
+                    e.dataTransfer.setData('text/plain', idx.toString());
+                });
+
+                poolEl.appendChild(cardEl);
+            });
+
+            if (cur === total && !state.answered) {
+                setTimeout(() => {
+                    const inp = document.getElementById('inline-result-input');
+                    if (inp) inp.focus();
+                }, 60);
+            }
+        }
+
+        function handleFactorAttempt(poolIdx) {
+            if (isNaN(poolIdx) || !state.pool[poolIdx]) return;
+            const card = state.pool[poolIdx];
+            const t = I18N[state.lang];
+
+            if (card.stepOrder === state.chainIndex) {
+                card.used = true;
+                state.chainIndex++;
+                renderChainBoard();
+            } else {
+                const alertEl = document.getElementById('chain-alert');
+                alertEl.innerHTML = `<span class="text-rose-600">${t.factorErr}</span>`;
+            }
+        }
+
+        function verifyFinalResult() {
+            if (state.answered) return;
+            const inp = document.getElementById('inline-result-input');
+            if (!inp) return;
+            const raw = inp.value.trim().replace(',', '.');
+            if (raw === '' || isNaN(Number(raw))) {
+                inp.focus();
+                return;
+            }
+
+            const userVal = parseFloat(raw);
+            const expected = state.problem.answer;
+            const relErr = Math.abs(userVal - expected) / Math.max(Math.abs(expected), 1e-6);
+            const isOk = relErr <= 0.035 || Math.abs(userVal - expected) <= 0.02;
+
+            state.answered = true;
+            inp.disabled = true;
+            const btn = document.getElementById('btn-inline-check');
+            if (btn) btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            if (isOk) {
+                state.hits++;
+                state.streak++;
+                if (state.streak > state.record) state.record = state.streak;
+                state.branchHits[state.branch]++;
+            } else {
+                state.streak = 0;
+            }
+
+            updateScorePills();
+
+            state.history.push({
+                num: state.qCount,
+                branch: state.branch === 'fisica' ? 'Física' : 'Química',
+                topic: state.lang === 'es' ? state.problem.topicEs : state.problem.topicCa,
+                user: `${userVal} ${state.problem.finalUnit}`,
+                expected: `${roundTo(expected, 2)} ${state.problem.finalUnit}`,
+                ok: isOk
+            });
+
+            const t = I18N[state.lang];
+            const fb = document.getElementById('final-feedback');
+            fb.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-300', 'text-emerald-950', 'bg-rose-50', 'border-rose-300', 'text-rose-950');
+
+            if (isOk) {
+                fb.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-950');
+                document.getElementById('fb-icon').textContent = '✅';
+                document.getElementById('fb-title').textContent = t.ansOk;
+            } else {
+                fb.classList.add('bg-rose-50', 'border-rose-300', 'text-rose-950');
+                document.getElementById('fb-icon').textContent = '❌';
+                document.getElementById('fb-title').textContent = t.ansErr;
+            }
+            document.getElementById('fb-detail').innerHTML = `Tu respuesta: <strong>${userVal} ${state.problem.finalUnit}</strong> · Valor correcto: <strong>${roundTo(expected, 2)} ${state.problem.finalUnit}</strong>`;
+        }
+
+        function updateScorePills() {
+            document.getElementById('stat-hits').textContent = state.hits;
+            document.getElementById('stat-record').textContent = state.record;
+            document.getElementById('stat-streak').textContent = state.streak;
+            document.getElementById('stat-phys').textContent = state.branchHits.fisica;
+            document.getElementById('stat-chem').textContent = state.branchHits.quimica;
+        }
+
+        // =====================================================
+        // IDIOMA, CRONÓMETRO Y PDF DE SESIÓN
+        // =====================================================
+        function setLanguage(lang) {
+            state.lang = lang;
+            const t = I18N[lang];
+
+            const btnCa = document.getElementById('btn-lang-ca');
+            const btnEs = document.getElementById('btn-lang-es');
+            if (lang === 'ca') {
+                btnCa.className = "px-3.5 py-1.5 rounded-full transition-all bg-white text-[#4f46e5] shadow-sm";
+                btnEs.className = "px-3.5 py-1.5 rounded-full transition-all text-slate-500 hover:text-slate-800";
+            } else {
+                btnEs.className = "px-3.5 py-1.5 rounded-full transition-all bg-white text-[#4f46e5] shadow-sm";
+                btnCa.className = "px-3.5 py-1.5 rounded-full transition-all text-slate-500 hover:text-slate-800";
+            }
+
+            document.getElementById('lbl-hits').textContent = t.hits;
+            document.getElementById('lbl-record').textContent = t.record;
+            document.getElementById('lbl-streak').textContent = t.streak;
+            document.getElementById('lbl-time').textContent = t.time;
+            document.getElementById('lbl-student').textContent = t.student;
+            document.getElementById('student-name').placeholder = t.studentPh;
+            document.getElementById('lbl-phys-pill').textContent = t.physPill;
+            document.getElementById('lbl-chem-pill').textContent = t.chemPill;
+            document.getElementById('lbl-pdf-btn').textContent = t.pdfBtn;
+            document.getElementById('lbl-tab-phys').textContent = t.tabPhys;
+            document.getElementById('lbl-tab-chem').textContent = t.tabChem;
+            document.getElementById('lbl-new-problem').textContent = t.newProblem;
+            document.getElementById('lbl-step1-badge').textContent = t.step1Badge;
+            document.getElementById('lbl-step1-title').textContent = t.step1Title;
+            document.getElementById('lbl-step2-badge').textContent = t.step2Badge;
+            document.getElementById('lbl-step2-title').textContent = t.step2Title;
+            document.getElementById('lbl-reset-chain').textContent = t.resetChain;
+            document.getElementById('lbl-bank-title').textContent = t.bankTitle;
+            document.getElementById('lbl-next-btn').textContent = t.nextBtn;
+
+            renderAll();
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function startTimer() {
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                if (state.timerRunning) {
+                    state.seconds++;
+                    document.getElementById('timer-display').textContent = formatTime(state.seconds);
+                }
+            }, 1000);
+        }
+
+        function toggleTimer() {
+            state.timerRunning = !state.timerRunning;
+            document.getElementById('btn-timer-toggle').textContent = state.timerRunning ? '⏸' : '▶';
+        }
+
+        function resetTimer() {
+            state.seconds = 0;
+            document.getElementById('timer-display').textContent = "00:00";
+        }
+
+        function generateSessionPDF() {
+            const student = document.getElementById('student-name').value.trim() || 'Alumno/a sin especificar';
+            const dateStr = new Date().toLocaleString(state.lang === 'ca' ? 'ca-ES' : 'es-ES');
+            const timeStr = formatTime(state.seconds);
+
+            const rows = state.history.length === 0
+                ? `<tr><td colspan="5" style="text-align:center; padding:16px; color:#64748b;">No hay ejercicios registrados en esta sesión.</td></tr>`
+                : state.history.map(h => `
+                    <tr>
+                        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-weight:700;">#${h.num}</td>
+                        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0;">${h.topic}</td>
+                        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-family:monospace;">${h.user}</td>
+                        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-family:monospace;">${h.expected}</td>
+                        <td style="padding:8px 10px; border-bottom:1px solid #e2e8f0; font-weight:700; color:${h.ok ? '#059669' : '#e11d48'};">${h.ok ? '✓ Correcto' : '✗ Incorrecto'}</td>
+                    </tr>
+                `).join('');
+
+            const win = window.open('', '_blank', 'width=880,height=680');
+            win.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Informe FactorLab — ${student}</title>
+                    <style>
+                        body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 32px; }
+                        .header { border-bottom: 2px solid #4f46e5; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+                        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+                        .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+                        th { background: #f1f5f9; text-align: left; padding: 9px 10px; font-size: 11px; text-transform: uppercase; color: #475569; }
+                        .footer { margin-top: 32px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div>
+                            <h1 style="margin:0; font-size:20px; color:#1e1b4b;">FactorLab — Informe de Factores de Conversión</h1>
+                            <div style="font-size:12px; color:#64748b; margin-top:4px;">Dpto. Física y Química — Elena Ruiz Alfaro · IEDIB</div>
+                        </div>
+                        <div style="text-align:right; font-size:12px;">
+                            <div><strong>Alumno/a:</strong> ${student}</div>
+                            <div><strong>Fecha:</strong> ${dateStr}</div>
+                        </div>
+                    </div>
+                    <div class="stats">
+                        <div class="card"><div style="font-size:11px; color:#64748b; font-weight:700;">ACIERTOS</div><div style="font-size:18px; font-weight:800; margin-top:4px;">${state.hits}</div></div>
+                        <div class="card"><div style="font-size:11px; color:#64748b; font-weight:700;">RÉCORD RACHA</div><div style="font-size:18px; font-weight:800; margin-top:4px;">${state.record} 🔥</div></div>
+                        <div class="card"><div style="font-size:11px; color:#64748b; font-weight:700;">TIEMPO</div><div style="font-size:18px; font-weight:800; margin-top:4px;">${timeStr}</div></div>
+                        <div class="card"><div style="font-size:11px; color:#64748b; font-weight:700;">DESGLOSE</div><div style="font-size:13px; font-weight:800; margin-top:6px;">Física: ${state.branchHits.fisica} · Química: ${state.branchHits.quimica}</div></div>
+                    </div>
+                    <table>
+                        <thead><tr><th>#</th><th>Bloque y Magnitud</th><th>Respuesta</th><th>Esperado</th><th>Resultado</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div class="footer">© 2026 Elena Ruiz Alfaro · Dpto. Física y Química · IEDIB</div>
+                    <script>window.onload = function(){ window.print(); };<\/script>
+                </body>
+                </html>
+            `);
+            win.document.close();
+        }
+
+        window.onload = function() {
+            startTimer();
+            nextProblem();
+        };
+    </script>
+</body>
+</html>
